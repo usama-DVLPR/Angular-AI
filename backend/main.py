@@ -41,7 +41,6 @@ async def chat(req:ChatRequest):
 @app.post("/stream/chat")
 async def chat_stream(req:ChatRequest):
     return StreamingResponse(
-        stream_generator(stream_generator(req.message)),
+        stream_generator(req.message),
         media_type="text/plain"
-
     )

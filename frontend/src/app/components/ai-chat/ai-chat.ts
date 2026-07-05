@@ -26,23 +26,51 @@ export class AiChat {
   async send() {
     if (!this.userMessage.trim() || this.loading()) return;
 
-    // User message add karo
-    this.messages().push({ role: 'user', text: this.userMessage });
     const prompt = this.userMessage;
     this.userMessage = '';
     this.loading.set(true);
 
-    // Empty AI message add karo — isme chunks append honge
-    this.messages().push({ role: 'ai', text: '' });
-    const aiIndex = this.messages.length - 1;
+    // User message aur empty AI message (chunks isme append honge) add karo
+    this.messages.update(msgs => [...msgs, { role: 'user', text: prompt }, { role: 'ai', text: '' }]);
+    const aiIndex = this.messages().length - 1;
+
+    // Chunks jitni bhi tezi se aayen, typing effect ke liye ek fixed pace par
+    // character-by-character reveal karo, taake network se decouple rahe.
+    let buffer = '';
+    let streamDone = false;
+    let typing = false;
+
+    const appendChar = (char: string) => {
+      this.messages.update(msgs => {
+        const updated = [...msgs];
+        updated[aiIndex] = { ...updated[aiIndex], text: updated[aiIndex].text + char };
+        return updated;
+      });
+    };
+
+    const typeNextChar = () => {
+      if (buffer.length === 0) {
+        typing = false;
+        if (streamDone) this.loading.set(false);
+        return;
+      }
+      appendChar(buffer[0]);
+      buffer = buffer.slice(1);
+      setTimeout(typeNextChar, 15);
+    };
 
     await this.aiChatService.streamMessage(
       prompt,
       (chunk) => {
-        this.messages()[aiIndex].text += chunk;
+        buffer += chunk;
+        if (!typing) {
+          typing = true;
+          typeNextChar();
+        }
       },
       () => {
-        this.loading.set(false);
+        streamDone = true;
+        if (buffer.length === 0) this.loading.set(false);
       }
     );
   }
