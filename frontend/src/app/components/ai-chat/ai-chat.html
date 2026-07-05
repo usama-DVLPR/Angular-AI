@@ -1,0 +1,23 @@
+<div class="chat-container">
+  <div class="messages">
+    @for (msg of messages(); track $index) {
+      <div class="message" [class.user]="msg.role === 'user'" [class.ai]="msg.role === 'ai'">
+        <span class="label">{{ msg.role === 'user' ? 'You' : 'AI' }}</span>
+        <p>{{ msg.text }}<span class="cursor" *ngIf="msg.role === 'ai' && loading() && $index === messages.length - 1">▋</span></p>
+      </div>
+    }
+  </div>
+
+  <div class="input-row">
+    <textarea
+      [(ngModel)]="userMessage"
+      (keydown)="onEnter($event)"
+      placeholder="Message likho... (Enter to send)"
+      rows="2"
+      [disabled]="loading()">
+    </textarea>
+    <button (click)="send()" [disabled]="loading()">
+      {{ loading() ? '...' : 'Send' }}
+    </button>
+  </div>
+</div>

@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -25,7 +26,22 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message:str
 
+def stream_generator(message:str):
+    response = model.generate_content(message, stream=True)
+    for chunk in response:
+        if chunk.text:
+            yield chunk.text
+
+
 @app.post("/chat")
 async def chat(req:ChatRequest):
     response = model.generate_content(req.message)
     return {'reply': response.text}
+
+@app.post("/stream/chat")
+async def chat_stream(req:ChatRequest):
+    return StreamingResponse(
+        stream_generator(stream_generator(req.message)),
+        media_type="text/plain"
+
+    )
